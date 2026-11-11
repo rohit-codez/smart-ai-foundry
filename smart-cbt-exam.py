@@ -1,12 +1,4 @@
-"""
-PulseCBT - Smart Computer Based Test system (single file, pure Python)
 
-Features : Student & Admin login | MCQ question panel | Timer based exams |
-           Automatic result calculation | Performance analysis & prediction
-
-Install  : nothing! Only Python's built-in modules are used (no pip, no venv).
-Run      : python smart-cbt-exam.py        (opens http://localhost:3000 automatically)
-"""
 import hashlib
 import json
 import os
@@ -23,10 +15,9 @@ from urllib.parse import parse_qs, urlparse
 
 PORT = 3000
 DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pulsecbt.db")
-SESSIONS = {}          # session id -> {"role", "uid", "name"}
+SESSIONS = {}          
 
 
-# ---------------------------------------------------------------- database
 def db():
     con = sqlite3.connect(DB_FILE, timeout=10)
     con.row_factory = sqlite3.Row
@@ -37,7 +28,7 @@ def rows(con, sql, args=()):
     return [dict(r) for r in con.execute(sql, args).fetchall()]
 
 
-SEED = [  # question, options, correct index, topic, explanation
+SEED = [  
     ("What is the type of the result of 3 / 2 in Python?", ["int", "float", "str", "complex"], 1, "Data Types",
      "The / operator always gives a float, even for whole numbers."),
     ("Which keyword is used to create a function?", ["func", "define", "def", "fun"], 2, "Functions",
@@ -110,7 +101,7 @@ def check_pw(pw, stored):
     return secrets.compare_digest(hash_pw(pw, stored.split("$")[0]), stored)
 
 
-# ---------------------------------------------------------------- exam engine
+
 def limit_secs(con, att):
     return con.execute("SELECT minutes FROM exams WHERE id=?", (att["exam_id"],)).fetchone()["minutes"] * 60
 
@@ -216,7 +207,6 @@ def exam_analytics(con, eid):
             "top": [{"name": a["name"], "pct": pct_of(a)} for a in top]}
 
 
-# ---------------------------------------------------------------- web server
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
@@ -242,7 +232,6 @@ class Handler(BaseHTTPRequestHandler):
         SESSIONS[sid] = {"role": role, "uid": uid, "name": name}
         self.reply({"ok": True}, headers={"Set-Cookie": "sid=%s; Path=/; HttpOnly; SameSite=Strict" % sid})
 
-    # ------------------------------------------------------------- GET
     def do_GET(self):
         url = urlparse(self.path)
         q = {k: v[0] for k, v in parse_qs(url.query).items()}
@@ -298,7 +287,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self.reply(exam_analytics(con, int(q.get("exam", 0))))
         self.reply({"error": "not found"}, 404)
 
-    # ------------------------------------------------------------- POST
+
     def do_POST(self):
         p = urlparse(self.path).path
         try:
@@ -306,7 +295,7 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             return self.reply({"error": "bad request"}, 400)
 
-        # ---- public: login / register
+   
         if p == "/api/admin/setup":
             pw = str(d.get("password", ""))
             if get_setting("admin_pw") is not None:
@@ -438,30 +427,30 @@ class Handler(BaseHTTPRequestHandler):
         self.reply({"error": "not found"}, 404)
 
 
-# ---------------------------------------------------------------- web page (HTML + CSS + JS inside Python)
+
 PAGE = r'''<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><title>PulseCBT - Smart Exams</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-:root{--bg:#060c0b;--card:#0f1c19;--line:#21392f;--lime:#a3e635;--cyan:#22d3ee;--org:#fb923c;--red:#fb7185;--ink:#f0fdf4;--mute:#8ba89f}
+:root{--bg:
 *{box-sizing:border-box;margin:0;font-family:'Segoe UI',system-ui,sans-serif}
 body{background:var(--bg);color:var(--ink);min-height:100vh;overflow-x:hidden}
-#bg{position:fixed;inset:0;z-index:0}
+
 .wrap{position:relative;z-index:1;max-width:1150px;margin:auto;padding:18px}
-#nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+
 .logo{font-size:23px;font-weight:800;flex:1;min-width:150px}.logo span{color:var(--lime)}
 button{cursor:pointer;border:0;border-radius:12px;padding:10px 16px;font-size:14px;color:var(--ink);background:var(--card);border:1px solid var(--line);transition:.2s}
-button:hover:not(:disabled){background:#173a30;transform:translateY(-2px)}button:disabled{opacity:.4;cursor:not-allowed}
-.nav.on,.pill.on{background:var(--lime);color:#1a2e05;font-weight:700;border-color:var(--lime)}
-.btn{background:linear-gradient(135deg,var(--lime),#65a30d);color:#1a2e05;font-weight:700;border:0}
-.btn:hover:not(:disabled){background:var(--cyan)}.btn.sm{padding:6px 12px;font-size:12px}.btn.red{background:#9f1239;color:#fff}
+button:hover:not(:disabled){background:
+.nav.on,.pill.on{background:var(--lime);color:
+.btn{background:linear-gradient(135deg,var(--lime),
+.btn:hover:not(:disabled){background:var(--cyan)}.btn.sm{padding:6px 12px;font-size:12px}.btn.red{background:
 .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);font-weight:400}
-input,select,textarea{background:#08130f;border:1px solid var(--line);color:var(--ink);padding:11px 13px;border-radius:10px;font-size:14px;outline:0;width:100%}
-input:focus,select:focus,textarea:focus{border-color:var(--lime);box-shadow:0 0 0 3px #a3e63526}
+input,select,textarea{background:
+input:focus,select:focus,textarea:focus{border-color:var(--lime);box-shadow:0 0 0 3px 
 .card{background:rgba(15,28,25,.88);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:20px;padding:20px;margin-bottom:16px}
-h1{font-size:clamp(32px,5.5vw,58px);line-height:1.08;background:linear-gradient(90deg,#fff,var(--lime),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+h1{font-size:clamp(32px,5.5vw,58px);line-height:1.08;background:linear-gradient(90deg,
 h3{color:var(--lime);margin-bottom:12px}.sub{color:var(--mute);margin:10px 0 18px}
-.chip{display:inline-block;background:#22d3ee1f;color:var(--cyan);padding:6px 14px;border-radius:99px;font-size:12px;font-weight:700;margin-bottom:12px}
+.chip{display:inline-block;background:
 .pill{border-radius:99px;padding:8px 18px}
 .row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}.row>*{flex:1;min-width:120px}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:16px}
@@ -472,7 +461,7 @@ h3{color:var(--lime);margin-bottom:12px}.sub{color:var(--mute);margin:10px 0 18p
 table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;color:var(--mute);font-weight:600;padding:8px}
 td{padding:9px 8px;border-top:1px solid var(--line)}.scroll{overflow-x:auto}
 .tag{display:inline-block;padding:3px 11px;border-radius:99px;font-size:12px;font-weight:700}
-.t-ok{background:#a3e6352b;color:var(--lime)}.t-bad{background:#fb71852b;color:var(--red)}.t-mid{background:#fb923c2b;color:var(--org)}.t-no{background:#21392f;color:var(--mute)}
+.t-ok{background:
 .exam{transition:.25s}.exam:hover{transform:translateY(-6px);border-color:var(--lime)}
 .bar{margin:11px 0}.bar p{font-size:13px;margin-bottom:4px;display:flex;justify-content:space-between;gap:8px}
 .bar div{height:11px;border-radius:99px;width:0;transition:width 1s;background:linear-gradient(90deg,var(--cyan),var(--lime))}
@@ -486,20 +475,18 @@ td{padding:9px 8px;border-top:1px solid var(--line)}.scroll{overflow-x:auto}
 .top{display:flex;align-items:center;gap:16px;margin-bottom:16px}.top h3{flex:1;margin:0}
 .qtext{font-size:21px;line-height:1.45;margin:10px 0 18px}
 .opt{display:flex;gap:12px;align-items:center;width:100%;text-align:left;padding:14px 16px;margin-bottom:10px;border-radius:14px;font-size:16px}
-.opt i{font-style:normal;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:#173a30;font-weight:800;flex-shrink:0}
-.opt.sel{border-color:var(--lime);background:#1a3a1c}.opt.sel i{background:var(--lime);color:#1a2e05}
+.opt i{font-style:normal;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:
+.opt.sel{border-color:var(--lime);background:
 .pal{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-.pb{padding:0;height:40px;border-radius:10px;font-weight:700}.pb.ans{background:var(--lime);color:#1a2e05;border-color:var(--lime)}
-.pb.flag{background:var(--org);color:#431407;border-color:var(--org)}.pb.cur{outline:2px solid var(--cyan);outline-offset:2px}
+.pb{padding:0;height:40px;border-radius:10px;font-weight:700}.pb.ans{background:var(--lime);color:
+.pb.flag{background:var(--org);color:
 .timer{position:relative;width:70px;height:70px}.timer svg{transform:rotate(-90deg)}.timer b{position:absolute;inset:0;display:grid;place-items:center;font-size:14px}
 .timer.low b{color:var(--red);animation:blink 1s infinite}@keyframes blink{50%{opacity:.4}}
 .key{font-size:12px;color:var(--mute);margin-top:10px}
 /* result */
 .ring{position:relative;width:170px;height:170px}.ring svg{transform:rotate(-90deg)}.ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:38px}
 .rev{border-top:1px solid var(--line);padding:14px 0}.rev .o{padding:8px 12px;border-radius:10px;margin:5px 0;font-size:14px;border:1px solid var(--line)}
-.o.right{background:#a3e6352b;border-color:var(--lime)}.o.wrong{background:#fb71852b;border-color:var(--red)}
-#toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,120px);background:var(--lime);color:#1a2e05;font-weight:700;padding:12px 22px;border-radius:14px;z-index:99;transition:.4s}
-#toast.show{transform:translate(-50%,0)}#toast.bad{background:var(--red);color:#4c0519}
+.o.right{background:
 </style></head><body>
 <canvas id="bg"></canvas>
 <div class="wrap"><div id="nav"></div><div id="app"></div></div>
@@ -708,7 +695,7 @@ boot();
 </script></body></html>
 '''
 
-# ---------------------------------------------------------------- start
+
 if __name__ == "__main__":
     init_db()
     server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)

@@ -1,12 +1,3 @@
-"""
-CoinPilot AI - AI Finance Expense Manager (single file, pure Python)
-
-Features : Transaction analysis | Expense forecasting | Expense charts |
-           Bill / receipt generation | Ask-your-money AI assistant
-
-Install  : nothing! Only Python's built-in modules are used (no pip, no venv).
-Run      : python ai-finance-manager.py        (opens http://localhost:3000 automatically)
-"""
 import calendar
 import json
 import math
@@ -29,7 +20,6 @@ BUDGETS = {"Food": 9000, "Transport": 3000, "Shopping": 6000, "Bills": 5000, "He
            "Entertainment": 2500, "Education": 2000, "Rent": 14000}
 
 
-# ---------------------------------------------------------------- database
 def db():
     con = sqlite3.connect(DB_FILE, timeout=10)
     con.row_factory = sqlite3.Row
@@ -204,13 +194,13 @@ def summary(con):
             "insights": ins[:7], "txn": con.execute("SELECT COUNT(*) FROM tx").fetchone()[0]}
 
 
-# ---------------------------------------------------------------- forecasting
+
 def forecast(con):
     t = date.today()
     days_in = calendar.monthrange(t.year, t.month)[1]
     left = days_in - t.day
     ms, te = t.replace(day=1).isoformat(), t.isoformat()
-    done = []   # completed months, oldest first (empty months before the data starts are skipped)
+    done = []   
     for back in range(5, 0, -1):
         a = month_start(t, back)
         done.append((a, tot(con, "expense", a.isoformat(), month_end(a).isoformat())))
@@ -220,7 +210,7 @@ def forecast(con):
     next_total = trend_avg([v for _, v in done])
     start14 = (t - timedelta(days=13)).isoformat()
 
-    def base(cat=None):   # daily spending speed: 60% last 14 days + 40% month so far
+    def base(cat=None):  
         return .6 * tot(con, "expense", start14, te, cat) / 14 + .4 * tot(con, "expense", ms, te, cat) / t.day
 
     spent = tot(con, "expense", ms, te)
@@ -229,7 +219,7 @@ def forecast(con):
         ((t - timedelta(days=90)).isoformat(),))}
     mean_w = (sum(wk.values()) / 7) or 1
     week = []
-    for i in range(1, 8):   # next 7 days, shaped by which weekday it is
+    for i in range(1, 8):  
         d = t + timedelta(days=i)
         f = wk.get((d.weekday() + 1) % 7, mean_w) / mean_w
         week.append({"day": d.isoformat()[5:], "amt": round(base() * f)})
@@ -279,7 +269,6 @@ def ask(con, q):
     return "You %s %s%s %s." % ("earned" if inc else "spent", money(amt), " on " + cat if cat and not inc else "", label)
 
 
-# ---------------------------------------------------------------- web server
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
@@ -368,29 +357,28 @@ class Handler(BaseHTTPRequestHandler):
         self.reply({"error": "not found"}, 404)
 
 
-# ---------------------------------------------------------------- web page (HTML + CSS + JS inside Python)
 PAGE = r'''<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><title>CoinPilot AI - Finance Manager</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-:root{--bg:#110c09;--card:#1e1611;--line:#3d2d22;--gold:#f5b700;--em:#2ee59d;--red:#ff5d5d;--sky:#4cc9f0;--ink:#fff7ea;--mute:#b39d86}
+:root{--bg:
 *{box-sizing:border-box;margin:0;font-family:'Segoe UI',system-ui,sans-serif}
-body{background:radial-gradient(circle at 80% -10%,#3b2808 0,var(--bg) 52%);color:var(--ink);min-height:100vh;overflow-x:hidden}
-#bg{position:fixed;inset:0;z-index:0}
+body{background:radial-gradient(circle at 80% -10%,
+
 .wrap{position:relative;z-index:1;max-width:1180px;margin:auto;padding:18px}
-#nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+
 .logo{font-size:24px;font-weight:800;flex:1;min-width:170px}.logo span{color:var(--gold)}
 button{cursor:pointer;border:1px solid var(--line);border-radius:12px;padding:10px 16px;font-size:14px;color:var(--ink);background:var(--card);transition:.2s}
-button:hover{background:#34261b;transform:translateY(-2px)}
-.nav.on{background:var(--gold);color:#2b1d00;font-weight:700;border-color:var(--gold)}
-.btn{background:linear-gradient(135deg,var(--gold),#d99100);color:#2b1d00;font-weight:700;border:0}.btn:hover{background:var(--em)}
-.btn.sm{padding:6px 12px;font-size:12px}.btn.red{background:#8f1d1d;color:#fff;border:0}.btn.ghost{background:transparent}
-input,select{background:#150f0b;border:1px solid var(--line);color:var(--ink);padding:11px 13px;border-radius:10px;font-size:14px;outline:0;width:100%}
-input:focus,select:focus{border-color:var(--gold);box-shadow:0 0 0 3px #f5b70028}
+button:hover{background:
+.nav.on{background:var(--gold);color:
+.btn{background:linear-gradient(135deg,var(--gold),
+.btn.sm{padding:6px 12px;font-size:12px}.btn.red{background:
+input,select{background:
+input:focus,select:focus{border-color:var(--gold);box-shadow:0 0 0 3px 
 .card{background:rgba(30,22,17,.88);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:20px;padding:20px;margin-bottom:16px}
-h1{font-size:clamp(28px,4.6vw,48px);line-height:1.1;background:linear-gradient(90deg,#fff,var(--gold),var(--em));-webkit-background-clip:text;background-clip:text;color:transparent}
+h1{font-size:clamp(28px,4.6vw,48px);line-height:1.1;background:linear-gradient(90deg,
 h3{color:var(--gold);margin-bottom:12px}.sub{color:var(--mute);margin:8px 0 16px}
-.chip{display:inline-block;background:#f5b70022;color:var(--gold);padding:6px 14px;border-radius:99px;font-size:12px;font-weight:700;margin-bottom:12px}
+.chip{display:inline-block;background:
 .row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}.row>*{flex:1;min-width:120px}.row>.fit{flex:0}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:16px}
@@ -399,10 +387,10 @@ h3{color:var(--gold);margin-bottom:12px}.sub{color:var(--mute);margin:8px 0 16px
 table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;color:var(--mute);font-weight:600;padding:8px}
 td{padding:9px 8px;border-top:1px solid var(--line)}.scroll{overflow-x:auto}
 .tag{display:inline-block;padding:3px 11px;border-radius:99px;font-size:12px;font-weight:700}
-.t-ok{background:#2ee59d26;color:var(--em)}.t-bad{background:#ff5d5d2b;color:var(--red)}.t-mid{background:#f5b70026;color:var(--gold)}.t-no{background:#3d2d22;color:var(--mute)}
+.t-ok{background:
 .inc{color:var(--em)}.exp{color:var(--red)}
 .seg button{border-radius:0;flex:1}.seg button:first-child{border-radius:12px 0 0 12px}.seg button:last-child{border-radius:0 12px 12px 0}
-.seg .on.e{background:var(--red);color:#fff}.seg .on.i{background:var(--em);color:#04281a}
+.seg .on.e{background:var(--red);color:
 .bar{margin:11px 0}.bar p{font-size:13px;margin-bottom:4px;display:flex;justify-content:space-between;gap:8px}
 .bar div{height:11px;border-radius:99px;width:0;transition:width 1s}
 .cols{display:flex;align-items:flex-end;gap:10px;height:170px;margin-top:8px}
@@ -411,25 +399,18 @@ td{padding:9px 8px;border-top:1px solid var(--line)}.scroll{overflow-x:auto}
 .pair span,.cols>div>span{width:46%;max-width:30px;border-radius:7px 7px 0 0;height:0;transition:height 1s}
 .donutwrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
 .donut{width:170px;height:170px;border-radius:50%;position:relative;transition:transform .4s}.donut:hover{transform:rotate(12deg) scale(1.04)}
-.donut:after{content:'';position:absolute;inset:36px;background:#1e1611;border-radius:50%}
+.donut:after{content:'';position:absolute;inset:36px;background:
 .legend div{margin:5px 0;font-size:14px}.dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:8px}
 .ai{display:flex;gap:10px;flex-wrap:wrap}.ai input{flex:1;min-width:220px;font-size:16px;padding:14px}
-.bubble{margin-top:14px;padding:14px 18px;border-radius:16px;background:#f5b70016;border:1px solid #f5b70044;min-height:24px;font-size:16px}
+.bubble{margin-top:14px;padding:14px 18px;border-radius:16px;background:
 .ins{display:flex;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:15px}.ins:first-of-type{border-top:0}
 svg text{fill:var(--mute);font-size:11px}
 .trend path{transition:stroke-dashoffset 1.8s ease}
 .msg{min-height:20px;font-weight:600;color:var(--red);margin-bottom:8px}
-#modal{position:fixed;inset:0;z-index:40;background:#000c;display:none;place-items:start center;padding:20px;overflow:auto}
-#modal.open{display:grid}
-#paper{background:#fffdf6;color:#1b1b1b;width:100%;max-width:400px;padding:26px 24px;font-family:'Courier New',monospace;font-size:14px;position:relative;animation:pop .4s cubic-bezier(.2,1.4,.4,1);box-shadow:0 20px 60px #000a}
-#paper *{font-family:'Courier New',monospace;color:#1b1b1b}#paper h2{text-align:center;font-size:20px;letter-spacing:2px}
-#paper .dash{border-top:2px dashed #999;margin:12px 0}#paper .l{display:flex;justify-content:space-between;gap:10px;margin:5px 0}
-#paper .big{font-size:18px;font-weight:bold}#paper .stamp{position:absolute;right:16px;top:70px;transform:rotate(-14deg);border:3px solid #16a34a;color:#16a34a;padding:2px 10px;font-weight:bold;letter-spacing:2px;opacity:.8}
-#paper .stamp{color:#16a34a}#paper .c{text-align:center;color:#666;font-size:12px}
+
 @keyframes pop{from{transform:scale(.8) translateY(30px);opacity:0}to{transform:none;opacity:1}}
-#toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,120px);background:var(--em);color:#04281a;font-weight:700;padding:12px 22px;border-radius:14px;z-index:99;transition:.4s}
-#toast.show{transform:translate(-50%,0)}#toast.bad{background:var(--red);color:#fff}
-@media print{body *{visibility:hidden}#paper,#paper *{visibility:visible}#paper{position:absolute;left:0;top:0;box-shadow:none;max-width:100%}#bg{display:none}}
+
+@media print{body *{visibility:hidden}
 </style></head><body>
 <canvas id="bg"></canvas>
 <div class="wrap"><div id="nav"></div><div id="app"></div></div>
@@ -444,8 +425,8 @@ async function api(p,d){const o=d===undefined?{}:{method:'POST',headers:{'Conten
 function toast(m,bad){const t=$('toast');t.textContent=m;t.className='show'+(bad?' bad':'');setTimeout(()=>t.className='',2800)}
 const fmt=n=>CUR+Math.round(n).toLocaleString('en-IN');
 const EXP=['Food','Transport','Shopping','Bills','Health','Entertainment','Education','Rent','Other'],INC=['Salary','Freelance','Gift','Other'];
-const CC={Food:'#f5b700',Transport:'#4cc9f0',Shopping:'#ff8a3d',Bills:'#2ee59d',Health:'#ff5d5d',Entertainment:'#b5e61d',Education:'#14b8a6',Rent:'#d6a77a',Other:'#94a3b8',Salary:'#2ee59d',Freelance:'#4cc9f0',Gift:'#f5b700'};
-const cc=c=>CC[c]||'#94a3b8';
+const CC={Food:'
+const cc=c=>CC[c]||'
 
 /* ---------- interactive background: golden coins that float, dodge the mouse and burst on click ---------- */
 const bgc=$('bg'),bx=bgc.getContext('2d');let W,H,mx=-999,my=-999,C=[],sym=CUR;
@@ -492,7 +473,7 @@ async function vDash(){
  <div class="grid2"><div class="card"><h3>Spending by category</h3><div class="donutwrap"><div class="donut" style="background:conic-gradient(${parts.join(',')||'#3d2d22 0 100%'})"></div>
   <div class="legend">${s.cats.map(c=>`<div><span class="dot" style="background:${cc(c.category)}"></span>${c.category}: <b>${fmt(c.amt)}</b></div>`).join('')}</div></div></div>
  <div class="card"><h3>Income vs expense (6 months)</h3><div class="cols">${s.monthly.map(m=>`<div><div class="pair"><span data-h="${m.income/mx*100}" style="background:var(--em)" title="Income ${fmt(m.income)}"></span><span data-h="${m.expense/mx*100}" style="background:var(--red)" title="Expense ${fmt(m.expense)}"></span></div>${m.label}</div>`).join('')}</div>
-  <p class="sub" style="margin:10px 0 0;font-size:12px"><span class="inc">&#9632;</span> income &nbsp;<span class="exp">&#9632;</span> expense</p></div></div>
+  <p class="sub" style="margin:10px 0 0;font-size:12px"><span class="inc">&
  <div class="card"><h3>Daily spending: last 30 days and 7-day forecast</h3>${trend(s.daily,f.week)}</div>
  <div class="grid2"><div class="card"><h3>Average spend by weekday</h3><div class="cols">${s.weekday.map(w=>`<div>${fmt(w.avg)}<span data-h="${w.avg/wmx*100}" style="background:linear-gradient(var(--gold),var(--em))"></span>${w.day}</div>`).join('')}</div></div>
  <div class="card"><h3>Top categories this month</h3>${bars(s.cats.slice(0,6).map(c=>({label:c.category+' ('+c.n+')',val:fmt(c.amt),pct:c.amt/tot*100,color:cc(c.category)})))}</div></div>`;
@@ -502,13 +483,13 @@ function trend(d,w){
  const all=[...d.map(x=>x.amt),...w.map(x=>x.amt)],mx=Math.max(1,...all),X=i=>30+i*(640/(all.length-1)),Y=v=>190-v/mx*165;
  const line=(a,o)=>a.map((v,i)=>(i?'L':'M')+X(i+o).toFixed(1)+' '+Y(v).toFixed(1)).join(' ');
  const act=d.map(x=>x.amt),fc=[act[act.length-1],...w.map(x=>x.amt)];
- return `<svg class="trend" viewBox="0 0 700 220" width="100%"><defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f5b700" stop-opacity=".35"/><stop offset="1" stop-color="#f5b700" stop-opacity="0"/></linearGradient></defs>
- ${[0,.5,1].map(k=>`<line x1="30" x2="670" y1="${Y(mx*k)}" y2="${Y(mx*k)}" stroke="#3d2d22"/><text x="0" y="${Y(mx*k)+4}">${fmt(mx*k)}</text>`).join('')}
- <path d="${line(act,0)} L${X(act.length-1)} 190 L30 190Z" fill="url(#ga)" stroke="none"/>
- <path d="${line(act,0)}" pathLength="1" stroke="#f5b700" stroke-width="3" fill="none" stroke-dasharray="1" stroke-dashoffset="1" stroke-linejoin="round"/>
- <path d="${line(fc,act.length-1)}" pathLength="1" stroke="#2ee59d" stroke-width="3" fill="none" stroke-dasharray=".02 .012" stroke-dashoffset="1"/>
- ${all.map((v,i)=>`<circle cx="${X(i)}" cy="${Y(v)}" r="6" fill="${i<d.length?'#f5b700':'#2ee59d'}" opacity="0" onmouseover="this.setAttribute('opacity',1)" onmouseout="this.setAttribute('opacity',0)"><title>${(i<d.length?d[i].day:w[i-d.length].day)}: ${fmt(v)}${i<d.length?'':' (forecast)'}</title></circle>`).join('')}
- <text x="${X(d.length)-20}" y="212" style="fill:#2ee59d">forecast &rarr;</text><text x="30" y="212">${d[0].day}</text></svg>`;
+ return `<svg class="trend" viewBox="0 0 700 220" width="100%"><defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="
+ ${[0,.5,1].map(k=>`<line x1="30" x2="670" y1="${Y(mx*k)}" y2="${Y(mx*k)}" stroke="
+ <path d="${line(act,0)} L${X(act.length-1)} 190 L30 190Z" fill="url(
+ <path d="${line(act,0)}" pathLength="1" stroke="
+ <path d="${line(fc,act.length-1)}" pathLength="1" stroke="
+ ${all.map((v,i)=>`<circle cx="${X(i)}" cy="${Y(v)}" r="6" fill="${i<d.length?'
+ <text x="${X(d.length)-20}" y="212" style="fill:
 }
 async function askAI(){const q=$('aq').value.trim();if(!q)return;$('ans').textContent='Thinking...';const r=await api('/api/ask?q='+encodeURIComponent(q));type($('ans'),r.answer)}
 
@@ -586,7 +567,6 @@ go('dash');
 </script></body></html>
 '''
 
-# ---------------------------------------------------------------- start
 if __name__ == "__main__":
     init_db()
     server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)

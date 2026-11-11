@@ -1,12 +1,3 @@
-"""
-SmartAttend AI  -  AI based Smart Attendance System (single file, Python)
-
-Features : Admin panel (admin sets own password) | Attendance records |
-           Attendance analysis | Student performance prediction | Face recognition
-
-Install  : pip install opencv-contrib-python numpy 
-Run      : python ai-attendance-system.py        (then open http://localhost:3000)
-"""
 import base64
 import csv
 import hashlib
@@ -23,9 +14,8 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-# ---------------------------------------------------------------- settings
 PORT = 3000
-CONFIDENCE_LIMIT = 70      # LBPH distance: lower = better match. Raise if faces are missed.
+CONFIDENCE_LIMIT = 70      
 BASE = os.path.dirname(os.path.abspath(__file__))
 DB_FILE = os.path.join(BASE, "attendance.db")
 FACE_DIR = os.path.join(BASE, "faces")
@@ -38,7 +28,7 @@ try:
 except Exception:
     HAS_CV = False
 
-# ---------------------------------------------------------------- database
+
 def db():
     con = sqlite3.connect(DB_FILE, timeout=10)
     con.row_factory = sqlite3.Row
@@ -73,7 +63,6 @@ def set_setting(key, value):
         con.execute("INSERT OR REPLACE INTO settings(k,v) VALUES(?,?)", (key, value))
 
 
-# ---------------------------------------------------------------- password
 def hash_pw(pw, salt=None):
     salt = salt or secrets.token_hex(16)
     digest = hashlib.pbkdf2_hmac("sha256", pw.encode(), salt.encode(), 200000).hex()
@@ -85,7 +74,6 @@ def check_pw(pw, stored):
     return secrets.compare_digest(hash_pw(pw, salt), stored)
 
 
-# ---------------------------------------------------------------- face recognition
 recognizer = None
 model_lock = threading.Lock()
 detector = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml") if HAS_CV else None
@@ -139,7 +127,6 @@ def mark_present(con, student_id, method="Face", day=None):
         return False
 
 
-# ---------------------------------------------------------------- analysis + prediction
 def predict(total_days, pct, score, recent):
     if total_days < 3:
         return "Not enough data", "Needs at least 3 class days of attendance to predict."
@@ -177,7 +164,6 @@ def student_stats(con):
     return total, result
 
 
-# ---------------------------------------------------------------- web server
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
@@ -197,7 +183,6 @@ class Handler(BaseHTTPRequestHandler):
     def is_admin(self):
         cookie = SimpleCookie(self.headers.get("Cookie", ""))
         return "sid" in cookie and cookie["sid"].value in SESSIONS
-
 
     def do_GET(self):
         url = urlparse(self.path)
@@ -262,7 +247,6 @@ class Handler(BaseHTTPRequestHandler):
                              {"Content-Disposition": "attachment; filename=attendance.csv"})
         self.reply({"error": "not found"}, 404)
 
-    # ------------------------------------------------------------- POST
     def do_POST(self):
         path = urlparse(self.path).path
         try:
@@ -271,7 +255,6 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             return self.reply({"error": "bad request"}, 400)
 
-        # ---- public endpoints
         if path == "/api/setup":
             pw = str(d.get("password", ""))
             if get_setting("admin_pw") is not None:
@@ -294,7 +277,6 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/scan":
             return self.scan(d)
 
-        # ---- admin endpoints
         if not self.is_admin():
             return self.reply({"error": "login"}, 401)
 
@@ -386,7 +368,6 @@ class Handler(BaseHTTPRequestHandler):
         self.reply({"ok": True, "msg": f"Saved {saved} face samples."})
 
 
-# ---------------------------------------------------------------- web page (HTML + CSS + JS inside Python)
 PAGE = r'''<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><title>SmartAttend AI</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -451,7 +432,6 @@ td{padding:8px;border-top:1px solid #3b2a5c}.scroll{overflow-x:auto}
   <button onclick="show('admin')">Admin</button>
  </nav>
 
- <!-- ================= STUDENT HOME ================= -->
  <div id="home">
   <div style="margin:20px 0 26px">
    <div class="chip">LIVE &middot; <span id="clock"></span></div>
@@ -478,7 +458,6 @@ td{padding:8px;border-top:1px solid #3b2a5c}.scroll{overflow-x:auto}
   </div>
  </div>
 
- <!-- ================= ADMIN ================= -->
  <div id="admin" class="hide">
   <div id="loginBox" class="card" style="max-width:430px;margin:40px auto">
    <h3 id="loginTitle">Admin Login</h3>
@@ -518,7 +497,6 @@ async function api(path,data){
 }
 const cls=l=>l==='High Performing'?'High':l==='Average'?'Avg':l==='At-Risk'?'Risk':'None';
 
-/* ---------- animated background that reacts to the mouse ---------- */
 const bgc=$('bg'),bx=bgc.getContext('2d');let W,H,P=[],mx=-999,my=-999;
 function rs(){W=bgc.width=innerWidth;H=bgc.height=innerHeight}
 addEventListener('resize',rs);rs();
@@ -539,7 +517,6 @@ addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
   requestAnimationFrame(loop);
 })();
 
-/* ---------- 3D tilt on cards ---------- */
 document.addEventListener('mousemove',e=>{
   document.querySelectorAll('.tilt').forEach(c=>{
     const r=c.getBoundingClientRect();
@@ -549,7 +526,6 @@ document.addEventListener('mousemove',e=>{
   });
 });
 
-/* ---------- clock + greeting ---------- */
 function tick(){
   const n=new Date(),h=n.getHours();
   $('clock').textContent=n.toLocaleTimeString()+' | '+n.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'short'});
@@ -562,7 +538,6 @@ function show(v){
   if(v==='admin'){stopCam();adminInit()}
 }
 
-/* ---------- camera helpers ---------- */
 function frame(video){
   const c=document.createElement('canvas');c.width=320;c.height=240;
   c.getContext('2d').drawImage(video,0,0,320,240);return c.toDataURL('image/jpeg',.85);
@@ -606,7 +581,6 @@ function burst(){
   }
 }
 
-/* ---------- student: my attendance ---------- */
 async function myStats(){
   const roll=$('rollIn').value.trim();if(!roll)return;
   const r=await api('/api/me?roll='+encodeURIComponent(roll));
@@ -621,7 +595,6 @@ async function myStats(){
   setTimeout(()=>{$('arc').style.strokeDashoffset=C*(1-Math.min(r.pct,100)/100)},50);
 }
 
-/* ================= ADMIN ================= */
 let ST={},tab='dash',enrollId=0,mstream=null;
 const TABS={dash:'Dashboard',stu:'Students',rec:'Records',pred:'Prediction',set:'Settings'};
 async function adminInit(){
@@ -763,7 +736,6 @@ async function chPw(){const r=await api('/api/password',{old:$('op').value,new:$
 </script></body></html>
 '''
 
-# ---------------------------------------------------------------- start
 if __name__ == "__main__":
     init_db()
     if HAS_CV:
