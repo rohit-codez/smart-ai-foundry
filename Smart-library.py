@@ -1,12 +1,4 @@
-"""
-ShelfSense - Smart Library Management System (single file, pure Python)
 
-Features : Library interface | Book & member data | Borrowing statistics |
-           Book recommendation | Book search
-
-Install  : nothing! Only Python's built-in modules are used (no pip, no venv).
-Run      : python Smart-library.py        (opens http://localhost:3000 automatically)
-"""
 import json
 import os
 import random
@@ -18,9 +10,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 PORT = 3000
-LOAN_DAYS = 14        # how long a book can be kept
-FINE_PER_DAY = 2      # fine for every late day
-MAX_LOANS = 5         # books one member can hold at once
+LOAN_DAYS = 14        
+FINE_PER_DAY = 2      
+MAX_LOANS = 5        
 DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "library.db")
 
 
@@ -125,12 +117,12 @@ def rows(con, sql, args=()):
     return [dict(r) for r in con.execute(sql, args).fetchall()]
 
 
-# ---------------------------------------------------------------- smart features
+
 def search_books(q, genre):
     with db() as con:
         sql, args, where = BOOK_SQL, [], []
         words = [w for w in q.lower().split() if w]
-        for w in words:   # every typed word must match title, author, genre or tags
+        for w in words:   
             where.append("(LOWER(b.title||' '||b.author||' '||b.genre||' '||b.tags) LIKE ?)")
             args.append("%" + w + "%")
         if genre:
@@ -214,7 +206,6 @@ def stats():
         }
 
 
-# ---------------------------------------------------------------- web server
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
@@ -304,42 +295,40 @@ class Handler(BaseHTTPRequestHandler):
         self.reply({"error": "not found"}, 404)
 
 
-# ---------------------------------------------------------------- web page (HTML + CSS + JS inside Python)
 PAGE = r'''<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><title>ShelfSense - Smart Library</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-:root{--bg:#06161a;--card:#0d2a30;--line:#1b4a52;--teal:#2dd4bf;--amber:#fbbf24;--coral:#fb7185;--ink:#ecfeff;--mute:#8fb8bd}
+:root{--bg:
 *{box-sizing:border-box;margin:0;font-family:'Segoe UI',system-ui,sans-serif}
-body{background:radial-gradient(circle at 85% -10%,#0f4a4a 0,var(--bg) 52%);color:var(--ink);min-height:100vh;overflow-x:hidden}
-#bg{position:fixed;inset:0;z-index:0}
+body{background:radial-gradient(circle at 85% -10%,
 .wrap{position:relative;z-index:1;max-width:1180px;margin:auto;padding:18px}
 nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:22px}
 .logo{font-size:23px;font-weight:800;flex:1;min-width:170px}.logo span{color:var(--amber)}
 button{cursor:pointer;border:0;border-radius:12px;padding:10px 16px;font-size:14px;color:var(--ink);background:var(--card);transition:.2s}
-button:hover{background:#14505a;transform:translateY(-2px)}
-.nav.on{background:var(--teal);color:#042f2e;font-weight:700}
-.btn{background:linear-gradient(135deg,var(--teal),#0f9f8f);color:#042f2e;font-weight:700}.btn:hover{background:var(--amber)}
-.btn.sm{padding:6px 12px;font-size:12px}.btn.red{background:#9f1239;color:#fff}
-input,select{background:#082126;border:1px solid var(--line);color:var(--ink);padding:11px 13px;border-radius:10px;font-size:14px;outline:0;width:100%}
-input:focus,select:focus{border-color:var(--teal);box-shadow:0 0 0 3px #2dd4bf33}
+button:hover{background:
+.nav.on{background:var(--teal);color:
+.btn{background:linear-gradient(135deg,var(--teal),
+.btn.sm{padding:6px 12px;font-size:12px}.btn.red{background:
+input,select{background:
+input:focus,select:focus{border-color:var(--teal);box-shadow:0 0 0 3px 
 .card{background:rgba(13,42,48,.85);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:20px;padding:20px;margin-bottom:16px}
-h1{font-size:clamp(30px,5vw,52px);line-height:1.1;background:linear-gradient(90deg,#fff,var(--teal),var(--amber));-webkit-background-clip:text;background-clip:text;color:transparent}
+h1{font-size:clamp(30px,5vw,52px);line-height:1.1;background:linear-gradient(90deg,
 h3{color:var(--teal);margin-bottom:12px}.sub{color:var(--mute);margin:10px 0 18px}
-.chip{display:inline-block;background:#fbbf2422;color:var(--amber);padding:6px 14px;border-radius:99px;font-size:12px;font-weight:700;margin-bottom:12px}
+.chip{display:inline-block;background:
 .pill{border:1px solid var(--line);background:transparent;padding:7px 14px;border-radius:99px;font-size:13px}.pill.on{background:var(--amber);color:#422006;border-color:var(--amber);font-weight:700}
 .row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}.row>*{flex:1;min-width:130px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:18px;margin-top:14px}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
 .book{cursor:pointer;transition:.25s;position:relative}.book:hover{transform:translateY(-8px) rotate(-1deg)}
 .cover{height:225px;border-radius:6px 14px 14px 6px;padding:16px 14px 14px 22px;display:flex;flex-direction:column;justify-content:space-between;
- box-shadow:-6px 8px 22px #0008;border-left:10px solid #0004;position:relative;overflow:hidden}
-.cover:after{content:'';position:absolute;inset:0;background:linear-gradient(100deg,#fff3 0,transparent 25%)}
+ box-shadow:-6px 8px 22px
+.cover:after{content:'';position:absolute;inset:0;background:linear-gradient(100deg,
 .cover small{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;opacity:.85;font-weight:700}
 .cover b{font-size:17px;line-height:1.2}.cover i{font-size:12px;opacity:.85}
-.avail{position:absolute;top:-8px;right:-6px;z-index:2;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:800;box-shadow:0 4px 10px #0006}
-.ok{background:var(--teal);color:#042f2e}.no{background:var(--coral);color:#4c0519}
-.match{position:absolute;top:-8px;left:-6px;z-index:2;background:var(--amber);color:#422006;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:800}
+.avail{position:absolute;top:-8px;right:-6px;z-index:2;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:800;box-shadow:0 4px 10px 
+.ok{background:var(--teal);color:
+.match{position:absolute;top:-8px;left:-6px;z-index:2;background:var(--amber);color:
 .why{font-size:12px;color:var(--mute);margin-top:8px}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:16px}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px}
@@ -347,7 +336,7 @@ h3{color:var(--teal);margin-bottom:12px}.sub{color:var(--mute);margin:10px 0 18p
 table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;color:var(--mute);font-weight:600;padding:8px}
 td{padding:9px 8px;border-top:1px solid var(--line)}.scroll{overflow-x:auto}
 .tag{display:inline-block;padding:3px 11px;border-radius:99px;font-size:12px;font-weight:700}
-.t-ok{background:#2dd4bf2a;color:var(--teal)}.t-late{background:#fb718533;color:var(--coral)}.t-warn{background:#fbbf2426;color:var(--amber)}
+.t-ok{background:
 .bar{margin:10px 0}.bar div{height:12px;border-radius:99px;background:linear-gradient(90deg,var(--teal),var(--amber));width:0;transition:width 1s}
 .bar p{font-size:13px;margin-bottom:4px;display:flex;justify-content:space-between;gap:8px}
 .cols{display:flex;align-items:flex-end;gap:6px;height:150px;margin-top:10px}
@@ -356,11 +345,11 @@ td{padding:9px 8px;border-top:1px solid var(--line)}.scroll{overflow-x:auto}
 .donutwrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
 .donut{width:150px;height:150px;border-radius:50%;position:relative}.donut:after{content:'';position:absolute;inset:30px;background:var(--card);border-radius:50%}
 .legend div{margin:5px 0;font-size:14px}.dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:8px}
-#modal{position:fixed;inset:0;z-index:40;background:#000b;display:none;place-items:center;padding:16px;overflow:auto}
-#modal.open{display:grid}#modal .card{max-width:640px;width:100%;animation:pop .35s cubic-bezier(.2,1.4,.4,1)}
+
+
 @keyframes pop{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
-#toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,120px);background:var(--teal);color:#042f2e;font-weight:700;padding:12px 22px;border-radius:14px;z-index:99;transition:.4s}
-#toast.show{transform:translate(-50%,0)}.hide{display:none!important}
+
+
 .big{font-size:17px;padding:15px 18px}
 </style></head><body>
 <canvas id="bg"></canvas>
@@ -507,7 +496,6 @@ go('lib');
 </script></body></html>
 '''
 
-# ---------------------------------------------------------------- start
 if __name__ == "__main__":
     init_db()
     server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
