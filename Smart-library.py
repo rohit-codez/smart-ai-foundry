@@ -9,13 +9,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 PORT = 3000
-LOAN_DAYS = 14        
-FINE_PER_DAY = 2      
-MAX_LOANS = 5        
+LOAN_DAYS = 14
+FINE_PER_DAY = 2
+MAX_LOANS = 5
 DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "library.db")
-
-
-# ---------------------------------------------------------------- database
 def db():
     con = sqlite3.connect(DB_FILE, timeout=10)
     con.row_factory = sqlite3.Row
@@ -55,7 +52,7 @@ MEMBERS = [
     ("LM002", "Diya Verma", "Student", ["Fantasy", "Fiction"]),
     ("LM003", "Kabir Singh", "Teacher", ["History", "Biography"]),
     ("LM004", "Meera Nair", "Public", ["Mystery", "Fiction"]),
-    ("LM005", "Rohit Gupta", "Student", ["Self-Help", "Technology"]),
+    ("LM005", "Rohan Gupta", "Student", ["Self-Help", "Technology"]),
     ("LM006", "Sana Khan", "Public", ["Science", "Fantasy"]),
 ]
 
@@ -78,7 +75,6 @@ def init_db():
 
 
 def seed(con):
-    """Fill a fresh library with sample books, members and a month of borrowing history."""
     rnd = random.Random(7)
     today = date.today()
     con.executemany("INSERT INTO books(title,author,genre,year,copies,tags) VALUES(?,?,?,?,?,?)", BOOKS)
@@ -114,14 +110,11 @@ BOOK_SQL = ("SELECT b.*, b.copies - (SELECT COUNT(*) FROM loans l WHERE l.book_i
 
 def rows(con, sql, args=()):
     return [dict(r) for r in con.execute(sql, args).fetchall()]
-
-
-
 def search_books(q, genre):
     with db() as con:
         sql, args, where = BOOK_SQL, [], []
         words = [w for w in q.lower().split() if w]
-        for w in words:   
+        for w in words:
             where.append("(LOWER(b.title||' '||b.author||' '||b.genre||' '||b.tags) LIKE ?)")
             args.append("%" + w + "%")
         if genre:
@@ -133,7 +126,6 @@ def search_books(q, genre):
 
 
 def recommend(member_id):
-    """Score = taste (genres this member borrows) + similar readers + popularity + availability."""
     with db() as con:
         mine = {r[0] for r in con.execute("SELECT DISTINCT book_id FROM loans WHERE member_id=?", (member_id,))}
         genres = {r["genre"]: r["c"] for r in con.execute(
@@ -203,8 +195,6 @@ def stats():
                                  "GROUP BY m.id ORDER BY c DESC LIMIT 3"),
             "daily": [{"day": d[5:], "c": daily.get(d, 0)} for d in days],
         }
-
-
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
@@ -292,42 +282,41 @@ class Handler(BaseHTTPRequestHandler):
                 msg = "Returned. Thank you!" if not late else "Returned %d day(s) late. Fine: Rs %d." % (late, late * FINE_PER_DAY)
                 return self.reply({"ok": True, "msg": msg})
         self.reply({"error": "not found"}, 404)
-
-
 PAGE = r'''<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><title>ShelfSense - Smart Library</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-:root{--bg:
+:root{--bg:#06161a;--card:#0d2a30;--line:#1b4a52;--teal:#2dd4bf;--amber:#fbbf24;--coral:#fb7185;--ink:#ecfeff;--mute:#8fb8bd}
 *{box-sizing:border-box;margin:0;font-family:'Segoe UI',system-ui,sans-serif}
-body{background:radial-gradient(circle at 85% -10%,
+body{background:radial-gradient(circle at 85% -10%,#0f4a4a 0,var(--bg) 52%);color:var(--ink);min-height:100vh;overflow-x:hidden}
+#bg{position:fixed;inset:0;z-index:0}
 .wrap{position:relative;z-index:1;max-width:1180px;margin:auto;padding:18px}
 nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:22px}
 .logo{font-size:23px;font-weight:800;flex:1;min-width:170px}.logo span{color:var(--amber)}
 button{cursor:pointer;border:0;border-radius:12px;padding:10px 16px;font-size:14px;color:var(--ink);background:var(--card);transition:.2s}
-button:hover{background:
-.nav.on{background:var(--teal);color:
-.btn{background:linear-gradient(135deg,var(--teal),
-.btn.sm{padding:6px 12px;font-size:12px}.btn.red{background:
-input,select{background:
-input:focus,select:focus{border-color:var(--teal);box-shadow:0 0 0 3px 
+button:hover{background:#14505a;transform:translateY(-2px)}
+.nav.on{background:var(--teal);color:#042f2e;font-weight:700}
+.btn{background:linear-gradient(135deg,var(--teal),#0f9f8f);color:#042f2e;font-weight:700}.btn:hover{background:var(--amber)}
+.btn.sm{padding:6px 12px;font-size:12px}.btn.red{background:#9f1239;color:#fff}
+input,select{background:#082126;border:1px solid var(--line);color:var(--ink);padding:11px 13px;border-radius:10px;font-size:14px;outline:0;width:100%}
+input:focus,select:focus{border-color:var(--teal);box-shadow:0 0 0 3px #2dd4bf33}
 .card{background:rgba(13,42,48,.85);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:20px;padding:20px;margin-bottom:16px}
-h1{font-size:clamp(30px,5vw,52px);line-height:1.1;background:linear-gradient(90deg,
+h1{font-size:clamp(30px,5vw,52px);line-height:1.1;background:linear-gradient(90deg,#fff,var(--teal),var(--amber));-webkit-background-clip:text;background-clip:text;color:transparent}
 h3{color:var(--teal);margin-bottom:12px}.sub{color:var(--mute);margin:10px 0 18px}
-.chip{display:inline-block;background:
+.chip{display:inline-block;background:#fbbf2422;color:var(--amber);padding:6px 14px;border-radius:99px;font-size:12px;font-weight:700;margin-bottom:12px}
 .pill{border:1px solid var(--line);background:transparent;padding:7px 14px;border-radius:99px;font-size:13px}.pill.on{background:var(--amber);color:#422006;border-color:var(--amber);font-weight:700}
 .row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}.row>*{flex:1;min-width:130px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:18px;margin-top:14px}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
 .book{cursor:pointer;transition:.25s;position:relative}.book:hover{transform:translateY(-8px) rotate(-1deg)}
 .cover{height:225px;border-radius:6px 14px 14px 6px;padding:16px 14px 14px 22px;display:flex;flex-direction:column;justify-content:space-between;
- box-shadow:-6px 8px 22px
-.cover:after{content:'';position:absolute;inset:0;background:linear-gradient(100deg,
+ box-shadow:-6px 8px 22px #0008;border-left:10px solid #0004;position:relative;overflow:hidden}
+.cover:after{content:'';position:absolute;inset:0;background:linear-gradient(100deg,#fff3 0,transparent 25%)}
 .cover small{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;opacity:.85;font-weight:700}
 .cover b{font-size:17px;line-height:1.2}.cover i{font-size:12px;opacity:.85}
-.avail{position:absolute;top:-8px;right:-6px;z-index:2;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:800;box-shadow:0 4px 10px 
-.ok{background:var(--teal);color:
-.match{position:absolute;top:-8px;left:-6px;z-index:2;background:var(--amber);color:
+.avail{position:absolute;top:-8px;right:-6px;z-index:2;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:800;box-shadow:0 4px 10px #0006}
+.ok{background:var(--teal);color:#042f2e}.no{background:var(--coral);color:#4c0519}
+.match{position:absolute;top:-8px;left:-6px;z-index:2;background:var(--amber);color:#422006;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:800}
 .why{font-size:12px;color:var(--mute);margin-top:8px}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:16px}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px}
@@ -335,7 +324,7 @@ h3{color:var(--teal);margin-bottom:12px}.sub{color:var(--mute);margin:10px 0 18p
 table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;color:var(--mute);font-weight:600;padding:8px}
 td{padding:9px 8px;border-top:1px solid var(--line)}.scroll{overflow-x:auto}
 .tag{display:inline-block;padding:3px 11px;border-radius:99px;font-size:12px;font-weight:700}
-.t-ok{background:
+.t-ok{background:#2dd4bf2a;color:var(--teal)}.t-late{background:#fb718533;color:var(--coral)}.t-warn{background:#fbbf2426;color:var(--amber)}
 .bar{margin:10px 0}.bar div{height:12px;border-radius:99px;background:linear-gradient(90deg,var(--teal),var(--amber));width:0;transition:width 1s}
 .bar p{font-size:13px;margin-bottom:4px;display:flex;justify-content:space-between;gap:8px}
 .cols{display:flex;align-items:flex-end;gap:6px;height:150px;margin-top:10px}
@@ -344,11 +333,11 @@ td{padding:9px 8px;border-top:1px solid var(--line)}.scroll{overflow-x:auto}
 .donutwrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
 .donut{width:150px;height:150px;border-radius:50%;position:relative}.donut:after{content:'';position:absolute;inset:30px;background:var(--card);border-radius:50%}
 .legend div{margin:5px 0;font-size:14px}.dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:8px}
-
-
+#modal{position:fixed;inset:0;z-index:40;background:#000b;display:none;place-items:center;padding:16px;overflow:auto}
+#modal.open{display:grid}#modal .card{max-width:640px;width:100%;animation:pop .35s cubic-bezier(.2,1.4,.4,1)}
 @keyframes pop{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
-
-
+#toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,120px);background:var(--teal);color:#042f2e;font-weight:700;padding:12px 22px;border-radius:14px;z-index:99;transition:.4s}
+#toast.show{transform:translate(-50%,0)}.hide{display:none!important}
 .big{font-size:17px;padding:15px 18px}
 </style></head><body>
 <canvas id="bg"></canvas>
@@ -368,8 +357,6 @@ const GENRES=['Fiction','Science','History','Technology','Fantasy','Mystery','Se
 const COL={Fiction:['#14b8a6','#0f4c4a'],Science:['#f59e0b','#7c3a0a'],History:['#f0704f','#7a2a12'],Technology:['#22c55e','#14532d'],
  Fantasy:['#e11d48','#6b0f26'],Mystery:['#64a0b0','#16323c'],'Self-Help':['#eab308','#6b4a07'],Biography:['#06b6d4','#134e5c']};
 const gc=g=>COL[g]||['#14b8a6','#0f4c4a'];
-
-/* ---------- animated background: drifting book spines that dodge the mouse ---------- */
 const bgc=$('bg'),bx=bgc.getContext('2d');let W,H,S=[],mx=-999,my=-999;
 function rs(){W=bgc.width=innerWidth;H=bgc.height=innerHeight}addEventListener('resize',rs);rs();
 const SC=['45,212,191','251,191,36','251,113,133'];
@@ -385,16 +372,12 @@ addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
  }
  requestAnimationFrame(loop);
 })();
-
-/* ---------- navigation ---------- */
 const TABS={lib:'Library',mem:'Members',desk:'Desk',stat:'Statistics',rec:'For You'};
 let tab='lib',MEM=[];
 function go(k){tab=k;$('nav').innerHTML=Object.entries(TABS).map(([a,b])=>`<button class="nav ${a===k?'on':''}" onclick="go('${a}')">${b}</button>`).join('');
  ({lib:vLib,mem:vMem,desk:vDesk,stat:vStat,rec:vRec})[k]()}
 function cover(b){const [a,c]=gc(b.genre);return `<div class="cover" style="background:linear-gradient(145deg,${a},${c})"><small>${esc(b.genre)}</small><b>${esc(b.title)}</b><i>${esc(b.author)}</i></div>`}
 function card(b,extra=''){return `<div class="book" onclick="openBook(${b.id})">${extra}<span class="avail ${b.avail>0?'ok':'no'}">${b.avail>0?b.avail+' free':'all out'}</span>${cover(b)}</div>`}
-
-/* ---------- 1. library interface + 5. search ---------- */
 let genre='',tm;
 function vLib(){
  const h=new Date().getHours();
@@ -433,8 +416,6 @@ async function issue(b,m,fromModal){
  const r=await api('/api/issue',{book_id:b,member_id:m});toast(r.msg);
  if(r.ok){if(fromModal)$('modal').classList.remove('open');go(tab)}
 }
-
-/* ---------- 2. book + member data ---------- */
 async function vMem(){
  const m=await api('/api/members');
  $('view').innerHTML=`<div class="grid2"><div class="card"><h3>Add a member</h3>
@@ -449,8 +430,6 @@ async function vMem(){
 }
 async function addMem(){const r=await api('/api/members/add',{name:$('mn').value,kind:$('mk').value});toast(r.msg);if(r.ok)vMem()}
 async function addBook(){const r=await api('/api/books/add',{title:$('bt').value,author:$('ba').value,genre:$('bg').value,year:$('by').value,copies:$('bc').value,tags:$('bk').value});toast(r.msg);if(r.ok)vMem()}
-
-/* ---------- desk: issue + return ---------- */
 async function vDesk(){
  const [m,b,l]=await Promise.all([api('/api/members'),api('/api/books'),api('/api/loans')]);
  const today=new Date().toISOString().slice(0,10);
@@ -464,8 +443,6 @@ async function vDesk(){
   <td><button class="btn sm" onclick="giveBack(${x.id})">Return</button></td></tr>`).join('')||'<tr><td colspan="6">Every book is on the shelf.</td></tr>'}</table></div></div>`;
 }
 async function giveBack(id){const r=await api('/api/return',{id});toast(r.msg);vDesk()}
-
-/* ---------- 3. borrowing statistics ---------- */
 async function vStat(){
  const s=await api('/api/stats'),tot=s.genres.reduce((a,g)=>a+g.c,0)||1,mx=Math.max(1,...s.daily.map(d=>d.c)),tp=Math.max(1,...s.top.map(t=>t.c));
  const tile=(l,n,c)=>`<div class="stat"><b style="${c?'color:'+c:''}" data-n="${n}">0</b><span>${l}</span></div>`;
@@ -479,8 +456,6 @@ async function vStat(){
  document.querySelectorAll('[data-n]').forEach(el=>{const end=+el.dataset.n,t0=performance.now();(function f(t){const k=Math.min(1,(t-t0)/900);el.textContent=Math.round(end*k);if(k<1)requestAnimationFrame(f)})(t0)});
  setTimeout(()=>{document.querySelectorAll('[data-w]').forEach(e=>e.style.width=e.dataset.w+'%');document.querySelectorAll('[data-h]').forEach(e=>e.style.height=e.dataset.h+'%')},60);
 }
-
-/* ---------- 4. book recommendation ---------- */
 async function vRec(){
  MEM=await api('/api/members');
  $('view').innerHTML=`<div class="card"><h3>Picked just for you</h3><p class="sub" style="margin-top:0">We study what a member has borrowed, find readers with a similar taste, and rank the books they will most likely enjoy.</p>
@@ -494,7 +469,6 @@ async function showRec(){
 go('lib');
 </script></body></html>
 '''
-
 if __name__ == "__main__":
     init_db()
     server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)

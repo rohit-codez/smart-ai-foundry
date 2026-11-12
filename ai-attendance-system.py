@@ -15,7 +15,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 PORT = 3000
-CONFIDENCE_LIMIT = 70      
+CONFIDENCE_LIMIT = 70
 BASE = os.path.dirname(os.path.abspath(__file__))
 DB_FILE = os.path.join(BASE, "attendance.db")
 FACE_DIR = os.path.join(BASE, "faces")
@@ -27,7 +27,6 @@ try:
     HAS_CV = hasattr(cv2, "face")
 except Exception:
     HAS_CV = False
-
 
 def db():
     con = sqlite3.connect(DB_FILE, timeout=10)

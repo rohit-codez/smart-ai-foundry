@@ -1,4 +1,3 @@
-
 import hashlib
 import json
 import os
@@ -15,9 +14,7 @@ from urllib.parse import parse_qs, urlparse
 
 PORT = 3000
 DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pulsecbt.db")
-SESSIONS = {}          
-
-
+SESSIONS = {}
 def db():
     con = sqlite3.connect(DB_FILE, timeout=10)
     con.row_factory = sqlite3.Row
@@ -28,7 +25,7 @@ def rows(con, sql, args=()):
     return [dict(r) for r in con.execute(sql, args).fetchall()]
 
 
-SEED = [  
+SEED = [
     ("What is the type of the result of 3 / 2 in Python?", ["int", "float", "str", "complex"], 1, "Data Types",
      "The / operator always gives a float, even for whole numbers."),
     ("Which keyword is used to create a function?", ["func", "define", "def", "fun"], 2, "Functions",
@@ -99,15 +96,11 @@ def hash_pw(pw, salt=None):
 
 def check_pw(pw, stored):
     return secrets.compare_digest(hash_pw(pw, stored.split("$")[0]), stored)
-
-
-
 def limit_secs(con, att):
     return con.execute("SELECT minutes FROM exams WHERE id=?", (att["exam_id"],)).fetchone()["minutes"] * 60
 
 
 def finalize(con, att):
-    """Automatic result calculation: count right answers and store the score."""
     if att["finished"]:
         return
     qs = con.execute("SELECT id,correct FROM questions WHERE exam_id=?", (att["exam_id"],)).fetchall()
@@ -119,7 +112,6 @@ def finalize(con, att):
 
 
 def live_attempt(con, uid, aid):
-    """Return the unfinished attempt; auto-submit it if the time has run out."""
     att = con.execute("SELECT * FROM attempts WHERE id=? AND user_id=?", (aid, uid)).fetchone()
     if not att or att["finished"]:
         return None
@@ -154,7 +146,6 @@ def result_of(con, att):
 
 
 def predict(pcts, weak):
-    """Weighted average of past scores (recent exams count more) plus the trend."""
     if len(pcts) < 2:
         return {"value": None, "label": "Need more data", "tip": "Finish at least 2 exams to unlock your prediction."}
     w = range(1, len(pcts) + 1)
@@ -205,8 +196,6 @@ def exam_analytics(con, eid):
             "buckets": [sum(lo <= p < hi for p in pcts) for lo, hi in ((0, 40), (40, 60), (60, 80), (80, 101))],
             "hardest": sorted(hard, key=lambda x: x["pct"])[:5] if atts else [],
             "top": [{"name": a["name"], "pct": pct_of(a)} for a in top]}
-
-
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
@@ -231,7 +220,6 @@ class Handler(BaseHTTPRequestHandler):
         sid = secrets.token_hex(24)
         SESSIONS[sid] = {"role": role, "uid": uid, "name": name}
         self.reply({"ok": True}, headers={"Set-Cookie": "sid=%s; Path=/; HttpOnly; SameSite=Strict" % sid})
-
     def do_GET(self):
         url = urlparse(self.path)
         q = {k: v[0] for k, v in parse_qs(url.query).items()}
@@ -286,16 +274,12 @@ class Handler(BaseHTTPRequestHandler):
                 if p == "/api/admin/analytics":
                     return self.reply(exam_analytics(con, int(q.get("exam", 0))))
         self.reply({"error": "not found"}, 404)
-
-
     def do_POST(self):
         p = urlparse(self.path).path
         try:
             d = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
         except Exception:
             return self.reply({"error": "bad request"}, 400)
-
-   
         if p == "/api/admin/setup":
             pw = str(d.get("password", ""))
             if get_setting("admin_pw") is not None:
@@ -350,7 +334,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply({"ok": False, "msg": "Exam not available."})
             att = con.execute("SELECT * FROM attempts WHERE user_id=? AND exam_id=? AND finished IS NULL",
                               (uid, ex["id"])).fetchone()
-            if att and live_attempt(con, uid, att["id"]) is None:   # time already over -> auto submitted
+            if att and live_attempt(con, uid, att["id"]) is None:
                 return self.reply({"ok": True, "done": att["id"]})
             if not att:
                 ids = [r[0] for r in con.execute("SELECT id FROM questions WHERE exam_id=?", (ex["id"],))]
@@ -425,32 +409,29 @@ class Handler(BaseHTTPRequestHandler):
             set_setting("admin_pw", hash_pw(str(d["new"])))
             return self.reply({"ok": True, "msg": "Password changed."})
         self.reply({"error": "not found"}, 404)
-
-
-
 PAGE = r'''<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><title>PulseCBT - Smart Exams</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-:root{--bg:
+:root{--bg:#060c0b;--card:#0f1c19;--line:#21392f;--lime:#a3e635;--cyan:#22d3ee;--org:#fb923c;--red:#fb7185;--ink:#f0fdf4;--mute:#8ba89f}
 *{box-sizing:border-box;margin:0;font-family:'Segoe UI',system-ui,sans-serif}
 body{background:var(--bg);color:var(--ink);min-height:100vh;overflow-x:hidden}
-
+#bg{position:fixed;inset:0;z-index:0}
 .wrap{position:relative;z-index:1;max-width:1150px;margin:auto;padding:18px}
-
+#nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:20px}
 .logo{font-size:23px;font-weight:800;flex:1;min-width:150px}.logo span{color:var(--lime)}
 button{cursor:pointer;border:0;border-radius:12px;padding:10px 16px;font-size:14px;color:var(--ink);background:var(--card);border:1px solid var(--line);transition:.2s}
-button:hover:not(:disabled){background:
-.nav.on,.pill.on{background:var(--lime);color:
-.btn{background:linear-gradient(135deg,var(--lime),
-.btn:hover:not(:disabled){background:var(--cyan)}.btn.sm{padding:6px 12px;font-size:12px}.btn.red{background:
+button:hover:not(:disabled){background:#173a30;transform:translateY(-2px)}button:disabled{opacity:.4;cursor:not-allowed}
+.nav.on,.pill.on{background:var(--lime);color:#1a2e05;font-weight:700;border-color:var(--lime)}
+.btn{background:linear-gradient(135deg,var(--lime),#65a30d);color:#1a2e05;font-weight:700;border:0}
+.btn:hover:not(:disabled){background:var(--cyan)}.btn.sm{padding:6px 12px;font-size:12px}.btn.red{background:#9f1239;color:#fff}
 .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);font-weight:400}
-input,select,textarea{background:
-input:focus,select:focus,textarea:focus{border-color:var(--lime);box-shadow:0 0 0 3px 
+input,select,textarea{background:#08130f;border:1px solid var(--line);color:var(--ink);padding:11px 13px;border-radius:10px;font-size:14px;outline:0;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--lime);box-shadow:0 0 0 3px #a3e63526}
 .card{background:rgba(15,28,25,.88);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:20px;padding:20px;margin-bottom:16px}
-h1{font-size:clamp(32px,5.5vw,58px);line-height:1.08;background:linear-gradient(90deg,
+h1{font-size:clamp(32px,5.5vw,58px);line-height:1.08;background:linear-gradient(90deg,#fff,var(--lime),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
 h3{color:var(--lime);margin-bottom:12px}.sub{color:var(--mute);margin:10px 0 18px}
-.chip{display:inline-block;background:
+.chip{display:inline-block;background:#22d3ee1f;color:var(--cyan);padding:6px 14px;border-radius:99px;font-size:12px;font-weight:700;margin-bottom:12px}
 .pill{border-radius:99px;padding:8px 18px}
 .row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}.row>*{flex:1;min-width:120px}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:16px}
@@ -461,7 +442,7 @@ h3{color:var(--lime);margin-bottom:12px}.sub{color:var(--mute);margin:10px 0 18p
 table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;color:var(--mute);font-weight:600;padding:8px}
 td{padding:9px 8px;border-top:1px solid var(--line)}.scroll{overflow-x:auto}
 .tag{display:inline-block;padding:3px 11px;border-radius:99px;font-size:12px;font-weight:700}
-.t-ok{background:
+.t-ok{background:#a3e6352b;color:var(--lime)}.t-bad{background:#fb71852b;color:var(--red)}.t-mid{background:#fb923c2b;color:var(--org)}.t-no{background:#21392f;color:var(--mute)}
 .exam{transition:.25s}.exam:hover{transform:translateY(-6px);border-color:var(--lime)}
 .bar{margin:11px 0}.bar p{font-size:13px;margin-bottom:4px;display:flex;justify-content:space-between;gap:8px}
 .bar div{height:11px;border-radius:99px;width:0;transition:width 1s;background:linear-gradient(90deg,var(--cyan),var(--lime))}
@@ -470,23 +451,23 @@ td{padding:9px 8px;border-top:1px solid var(--line)}.scroll{overflow-x:auto}
 .cols div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:11px;color:var(--mute);gap:3px}
 .cols span{width:100%;border-radius:7px 7px 0 0;background:linear-gradient(var(--lime),var(--cyan));height:0;transition:height 1s;max-width:46px}
 .msg{min-height:22px;margin-bottom:10px;font-weight:600;color:var(--red)}
-/* exam room */
 .room{display:grid;grid-template-columns:1fr 270px;gap:16px}@media(max-width:800px){.room{grid-template-columns:1fr}}
 .top{display:flex;align-items:center;gap:16px;margin-bottom:16px}.top h3{flex:1;margin:0}
 .qtext{font-size:21px;line-height:1.45;margin:10px 0 18px}
 .opt{display:flex;gap:12px;align-items:center;width:100%;text-align:left;padding:14px 16px;margin-bottom:10px;border-radius:14px;font-size:16px}
-.opt i{font-style:normal;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:
-.opt.sel{border-color:var(--lime);background:
+.opt i{font-style:normal;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:#173a30;font-weight:800;flex-shrink:0}
+.opt.sel{border-color:var(--lime);background:#1a3a1c}.opt.sel i{background:var(--lime);color:#1a2e05}
 .pal{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-.pb{padding:0;height:40px;border-radius:10px;font-weight:700}.pb.ans{background:var(--lime);color:
-.pb.flag{background:var(--org);color:
+.pb{padding:0;height:40px;border-radius:10px;font-weight:700}.pb.ans{background:var(--lime);color:#1a2e05;border-color:var(--lime)}
+.pb.flag{background:var(--org);color:#431407;border-color:var(--org)}.pb.cur{outline:2px solid var(--cyan);outline-offset:2px}
 .timer{position:relative;width:70px;height:70px}.timer svg{transform:rotate(-90deg)}.timer b{position:absolute;inset:0;display:grid;place-items:center;font-size:14px}
 .timer.low b{color:var(--red);animation:blink 1s infinite}@keyframes blink{50%{opacity:.4}}
 .key{font-size:12px;color:var(--mute);margin-top:10px}
-/* result */
 .ring{position:relative;width:170px;height:170px}.ring svg{transform:rotate(-90deg)}.ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:38px}
 .rev{border-top:1px solid var(--line);padding:14px 0}.rev .o{padding:8px 12px;border-radius:10px;margin:5px 0;font-size:14px;border:1px solid var(--line)}
-.o.right{background:
+.o.right{background:#a3e6352b;border-color:var(--lime)}.o.wrong{background:#fb71852b;border-color:var(--red)}
+#toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,120px);background:var(--lime);color:#1a2e05;font-weight:700;padding:12px 22px;border-radius:14px;z-index:99;transition:.4s}
+#toast.show{transform:translate(-50%,0)}#toast.bad{background:var(--red);color:#4c0519}
 </style></head><body>
 <canvas id="bg"></canvas>
 <div class="wrap"><div id="nav"></div><div id="app"></div></div>
@@ -498,8 +479,6 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 async function api(p,d){const o=d===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)};const r=await fetch(p,o);return r.json()}
 function toast(m,bad){const t=$('toast');t.textContent=m;t.className='show'+(bad?' bad':'');setTimeout(()=>t.className='',2800)}
 const tagc=p=>p>=75?'t-ok':p>=40?'t-mid':'t-bad';
-
-/* ---------- interactive background: glowing dot grid, mouse lens + click ripples ---------- */
 const bgc=$('bg'),bx=bgc.getContext('2d');let W,H,mx=-999,my=-999,R=[];const G=34;
 function rs(){W=bgc.width=innerWidth;H=bgc.height=innerHeight}addEventListener('resize',rs);rs();
 addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
@@ -516,8 +495,6 @@ addEventListener('click',e=>R.push({x:e.clientX,y:e.clientY,t:performance.now()}
  }
  requestAnimationFrame(loop);
 })(0);
-
-/* ---------- login / register ---------- */
 let ME={},ST={},role='student',reg=false,tab='';
 async function boot(){ST=await api('/api/status');ME=ST;ST.role?home():renderAuth()}
 function setRole(r){role=r;reg=false;renderAuth()}
@@ -542,8 +519,6 @@ async function authGo(){
  if(r.ok)boot();else $('amsg').textContent=r.msg;
 }
 async function logout(){await api('/api/logout',{});stopRoom();tab='';boot()}
-
-/* ---------- navigation ---------- */
 const STU={exams:'Exams',prog:'My Progress'},ADM={ov:'Overview',ex:'Exams',an:'Analytics',res:'Results',set:'Settings'};
 function nav(){
  const T=ME.role==='admin'?ADM:ME.role==='student'?STU:{};
@@ -553,8 +528,6 @@ function go(k){tab=k;nav();({exams:vExams,prog:vProg,ov:aOv,ex:aEx,an:aAn,res:aR
 function home(){go(ME.role==='admin'?'ov':'exams')}
 function grow(){setTimeout(()=>{document.querySelectorAll('[data-w]').forEach(e=>e.style.width=e.dataset.w+'%');document.querySelectorAll('[data-h]').forEach(e=>e.style.height=e.dataset.h+'%')},60)}
 function bars(list,warn){return list.map(t=>`<div class="bar ${warn&&t.pct<60?'w':''}"><p><span>${esc(t.label)}</span><b>${t.pct}%</b></p><div data-w="${t.pct}"></div></div>`).join('')}
-
-/* ================= STUDENT ================= */
 async function vExams(){
  const L=await api('/api/exams');
  $('app').innerHTML=`<h1 style="font-size:34px;margin-bottom:6px">Choose your exam</h1><p class="sub" style="margin-top:0">Once you start, the clock keeps running even if you close the page.</p>
@@ -634,8 +607,6 @@ async function vProg(){
  <div class="card"><h3>Past attempts</h3><div class="scroll"><table><tr><th>Exam</th><th>Date</th><th>Score</th><th>Result</th><th></th></tr>${a.history.slice().reverse().map(h=>`<tr><td>${esc(h.title)}</td><td>${h.day}</td><td>${h.score}/${h.total} (${Math.round(h.pct)}%)</td><td><span class="tag ${h.passed?'t-ok':'t-bad'}">${h.passed?'Passed':'Failed'}</span></td><td><button class="btn sm" onclick="showResult(${h.id})">Review</button></td></tr>`).join('')||'<tr><td colspan="5">Nothing yet.</td></tr>'}</table></div></div>`;
  grow();
 }
-
-/* ================= ADMIN ================= */
 async function aOv(){
  const o=await api('/api/admin/overview'),t=(l,n)=>`<div class="stat"><b>${n}</b><span>${l}</span></div>`;
  $('app').innerHTML=`<div class="stats">${t('Students',o.students)}${t('Exams',o.exams)}${t('Questions',o.questions)}${t('Submitted attempts',o.attempts)}</div>
@@ -694,8 +665,6 @@ async function chPw(){const r=await api('/api/admin/password',{old:$('op').value
 boot();
 </script></body></html>
 '''
-
-
 if __name__ == "__main__":
     init_db()
     server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
